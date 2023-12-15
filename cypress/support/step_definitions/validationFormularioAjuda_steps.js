@@ -1,33 +1,108 @@
-import { Given, When, Then } from "@badeball/cypress-cucumber-preprocessor"
+import {When, Then } from "@badeball/cypress-cucumber-preprocessor"
 
-
-// 1. Cenário:Preencher e enviar o campo "Name" que deve aceitar letras, espaços e números e limite máximo de 255 caracteres
- 
-Given("estou no formulário de ajuda", () => {
-    cy.visit("https://www.pagbrasil.com/support")
+// 1. Cenario: validacao dos campos  
+Then('validar Name', () => {
+    const allowedCharactersRegex = /^[a-zA-Z0-9\s]+$/
+    cy.get('#Name').type('abc123')    
+    cy.get('#Name').should('have.value', 'abc123')    
+    cy.get('#Name').type('!@#$%&*')    
+    cy.get('#Name').invoke('val').then((value) => {
+        const isValid = allowedCharactersRegex.test(value)
+        expect(isValid).to.be.false 
+    })
+    cy.get("#Name").should("have.attr", "maxlength", String(255));
 })
 
-When('preencher o campo Name com {string}', (Name) => {
-    cy.get('#formName').type(Name)    
+When('validar Email,', () => {
+    const emailRegex = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i 
+    cy.get('#Email').type('meuteste@gmail.com')   
+    cy.get('#Email').invoke('val')
+      .then((value) => {
+        expect(emailRegex.test(value)).to.be.true 
+      })  
+    cy.get('#Email').type('email_invalido')   
+    cy.get('#Email').invoke('val').then((value) => {
+        expect(emailRegex.test(value)).to.be.false 
+      })
+    cy.get("#Email").should("have.attr", "maxlength", String(150));
 })
 
-When('enviar o formulário', () => {
+When('validar Company', () => {
+    const allowedCharactersRegex = /^[a-zA-Z0-9\s]+$/
+    cy.get('#Company').type('abc123')    
+    cy.get('#Company').should('have.value', 'abc123')    
+    cy.get('#Company').type('!@#$%&*')    
+    cy.get('#Company').invoke('val').then((value) => {
+        const isValid = allowedCharactersRegex.test(value)
+        expect(isValid).to.be.false 
+    })
+    cy.get("#Company").should("have.attr", "maxlength", String(200));
+})
+
+When('validar Website', () => {
+ const urlRegex = /^(http|https):\/\/[^\s$.?#].[^\s]*$/;
+  cy.get('#Website').type('https://www.pagbrasil.com')  
+  cy.get('#Website').invoke('val').then((value) => {
+      expect(urlRegex.test(value)).to.be.true 
+  })
+  cy.get('#Website').type('url_inválida')
+  cy.get('#Website').invoke('val').then((value) => {
+      expect(urlRegex.test(value)).to.be.false 
+  })
+  cy.get("#Website").should("have.attr", "maxlength", String(200));
+})
+
+When('validar Phone', () => {
+    const phoneRegex = /^([1-9]{2}) 9?[6-9]{1}[0-9]{3}-[0-9]{4}$/ // Expressão regular para validar telefone com máscara
+  cy.get('#Phone').type('(12) 93456-7890')
+  cy.get('#Phone').invoke('val').then((value) => {
+      const phone = value.replace(/\D/g, '') 
+      expect(phoneRegex.test(phone)).to.be.true
+    })
+  cy.get('#Phone').type('1234567890')
+  cy.get('#Phone').invoke('val').then((value) => {
+      const phone = value.replace(/\D/g, '') 
+      expect(phoneRegex.test(phone)).to.be.false 
+    })
+    cy.get("#Phone").should("have.attr", "maxlength", String(15));
+})
+
+Then('validar Inquiry', () => {
+    const allowedCharactersRegex = /^[a-zA-Z0-9\s]+$/
+    cy.get('#Inquiry').type('abc123')    
+    cy.get('#Inquiry').should('have.value', 'abc123')    
+    cy.get('#Inquiry').type('!@#$%&*')    
+    cy.get('#Inquiry').invoke('val').then((value) => {
+        const isValid = allowedCharactersRegex.test(value)
+        expect(isValid).to.be.false 
+    })
+    cy.get("#Inquiry").should("have.attr", "maxlength", String(500));
+})
+
+//2. Cenario: Enviar formulario com sucesso 
+When('preencher todos os campos', () => {    
+    cy.get("#Name").type("Stephane Malo");
+    cy.get("#Email").type("meuteste@gmail.com");
+    cy.get("#Company").type("PgBrasil");
+    cy.get("#Website").type("https://www.pagbrasil.com");
+    cy.get("#Phone").type("(11) 11111-1111");
+    cy.get("#Inquiry").type("Estou realizando um teste neste input, deve aceitar meus char com sucesso");    
+})
+
+Then('fazer o submit do formulario', () => {
     // enviar o formulário
-    cy.get('#formName').submit()
+    cy.get("button").click()
 })
 
-Then('a API deve retornar HTTP_CODE 200 {int} com JSON:', (httpCode, json) => {
-    // Verificar a resposta do backend usando cy.request
-    cy.request('/sua-api-endpoint') // Substitua pelo endpoint real swagger
-        .its('status')
-        .should('eq', httpCode)
-        .its('body')
-        .should('deep.equal', JSON.parse(json))
-})
+Then('a API deve retornar HTTP_CODE 200', () => {
+    // Verificar a resposta do backend usando cy.intercept
 
-Then('o campo Name deve conter uma string de 255 caracteres', () => {
-     //verificar o limite permitido de char 255
-    cy.get('#formName').invoke('val').should('have.length', 255);
+    cy.intercept("POST", "*").as("post");    
+    cy.wait("@post").then((intercept) => {        
+        const { statusCode, body } = intercept.response;
+        expect(statusCode).to.eq(200);
+        expect(body.sucesso).to.be.true;
+      });
 })
 
 Then('não deve haver mensagens de erro no frontend', () => {
@@ -35,211 +110,38 @@ Then('não deve haver mensagens de erro no frontend', () => {
     cy.get('#Error').should('not.exist')
 })
 
-Then('deve haver mensagens de erro no frontend indicando os campos incorretos', () => {
-    // Verificar se o elemento de erro existe no frontend
-    cy.get('#Error').should('exist')
-})
 
-
-// 2. Cenario:Preencher e enviar o campo "Email" que deve aceitar a entrada de dados no formato de e-mail com limite máximo de 150 char.
-     
-Given("estou no formulário de ajuda", () => {
-    cy.visit("https://www.pagbrasil.com/support")
-})
-
-When('preencher o campo Email com {string}', (Email) => {
-    cy.get('#formEmail').type(Email) 
-})
+//3. Cenario: Enviar formulario com erro 
+When('preencher todos os campos em formato invalido', () => {
     
-When('enviar o formulário', () => {
-    // enviar o formulário
-    cy.get('#formEmail').submit()
+    cy.get("#Name").type("Stephane Malo");
+    cy.get("#Email").type("meuteste@gmail.com");
+    cy.get("#Company").type("PgBrasil");
+    cy.get("#Website").type("https://www.pagbrasil.com");
+    cy.get("#Phone").type("(11) 11111"); // Enviando Telefone invalido 
+    cy.get("#Inquiry").type("Estou realizando um teste neste input, deve aceitar meus char com sucesso");    
 })
 
-Then('a API deve retornar HTTP_CODE 200 {int} com JSON:', (httpCode, json) => {
-    // Verificar a resposta do backend usando cy.request
-    cy.request('/sua-api-endpoint') // Substitua pelo endpoint real swagger
-        .its('status')
-        .should('eq', httpCode)
-        .its('body')
-        .should('deep.equal', JSON.parse(json))
-})
-
-Then('o campo Email deve conter uma string de 150 caracteres', () => {
-    //verificar o limite permitido de char 150  
-   cy.get('#formEmail').invoke('val').should('have.length', 150);
-})
-
-Then('não deve haver mensagens de erro no frontend', () => {
-    // Verificar se o elemento de erro não existe no frontend
-    cy.get('#Error').should('not.exist')
-})
-
-Then('deve haver mensagens de erro no frontend indicando os campos incorretos', () => {
-    // Verificar se o elemento de erro existe no frontend
-    cy.get('#Error').should('exist')
-})
-
-
-// 3.Cenario:Preencher e enviar o  campo "Company" que deve aceitar letras, espaços e números com imite máximo de 200 char.
-
-Given("estou no formulário de ajuda", () => {
-    cy.visit("https://www.pagbrasil.com/support")
-})
-
-When('preencher o campo Email com {string}', (Company) => {
-    cy.get('#formCompany').type(Company) 
-})    
-
-When('enviar o formulário', () => {
-    // enviar o formulário
-    cy.get('#formCompany').submit()
-})
-
-Then('a API deve retornar HTTP_CODE 200 {int} com JSON:', (httpCode, json) => {
-    // Verificar a resposta do backend usando cy.request
-    cy.request('/sua-api-endpoint') // Substitua pelo endpoint real swagger
-        .its('status')
-        .should('eq', httpCode)
-        .its('body') 
-        .should('deep.equal', JSON.parse(json))
-})
-
-Then('o campo Company deve conter uma string de 200 caracteres', () => {
-    //verificar o limite permitido de char 200
-   cy.get('#formCompany').invoke('val').should('have.length', 200);
-})
-
-Then('não deve haver mensagens de erro no frontend', () => {
-    // Verificar se o elemento de erro não existe no frontend
-    cy.get('#Error').should('not.exist')
-})
-
-Then('deve haver mensagens de erro no frontend indicando os campos incorretos', () => {
-    // Verificar se o elemento de erro existe no frontend
-    cy.get('#Error').should('exist')
-})
-
-
-// 4.Cenario:Preencher e enviar o  campo "Website" que deve , que deve aceitar a entrada de dados no formato de URL e limite máximo de 200 char
-  
-Given("estou no formulário de ajuda", () => {
-    cy.visit("https://www.pagbrasil.com/support")
-})
-
-When('preencher o campo Website com {string}', (Website) => {
-    cy.get('#formWebsite').type(Website)  
-})
-
-When('enviar o formulário', () => {
-    // enviar o formulário
-    cy.get('#formWebsite').submit()
-})
-
-Then('a API deve retornar HTTP_CODE 200 {int} com JSON:', (httpCode, json) => {
-    // Verificar a resposta do backend usando cy.request
-    cy.request('/sua-api-endpoint') // Substitua pelo endpoint real swagger
-        .its('status')
-        .should('eq', httpCode)
-        .its('body')
-        .should('deep.equal', JSON.parse(json))
-})
-
-Then('o campo Website deve conter uma string de 200 caracteres', () => {
-     //verificar o limite permitido de char 200
-    cy.get('#formWebsite').invoke('val').should('have.length', 200);
-})
-
-Then('não deve haver mensagens de erro no frontend', () => {
-    // Verificar se o elemento de erro não existe no frontend
-    cy.get('#Error').should('not.exist')
-})
-
-Then('deve haver mensagens de erro no frontend indicando os campos incorretos', () => {
-    // Verificar se o elemento de erro existe no frontend
-    cy.get('#Error').should('exist')
-})
-     
-
-// 5.Cenario:Preencher e enviar o  campo "Phone" que deve , que deve aceitar a entrada de dados deve aceitar entrada de dados no padrão brasileiro de telefone com máscara com limite máximo de 15 char
-     
-Given("estou no formulário de ajuda", () => {
-    cy.visit("https://www.pagbrasil.com/support")
-})
-
-When('preencher o campo Phone com {string}', (Phone) => {
-    cy.get('#formPhone').type(Website)    
-
-})
-
-When('enviar o formulário', () => {
-    // enviar o formulário
-    cy.get('#formPhone').submit()
-})
-
-Then('a API deve retornar HTTP_CODE 200 {int} com JSON:', (httpCode, json) => {
-    // Verificar a resposta do backend usando cy.request
-    cy.request('/sua-api-endpoint') // Substitua pelo endpoint real swagger
-        .its('status')
-        .should('eq', httpCode)
-        .its('body')
-        .should('deep.equal', JSON.parse(json))
-})
-
-Then('o campo Phone deve conter uma string de 15 caracteres', () => {
-    //verificar o limite permitido de char 15
-    cy.get('#formPhone').invoke('val').should('have.length', 15);
-})
-
-Then('não deve haver mensagens de erro no frontend', () => {
-    // Verificar se o elemento de erro não existe no frontend
-    cy.get('#Error').should('not.exist')
-})
-
-Then('deve haver mensagens de erro no frontend indicando os campos incorretos', () => {
-    // Verificar se o elemento de erro existe no frontend
-    cy.get('#Error').should('exist')
-})
+Then('a API deve retornar HTTP_CODE 412', () => {
+    // Verificar a resposta do backend usando cy.intercept
+    cy.intercept("POST", "*").as("post");
     
-
-// 6.Cenario:Preencher e enviar o  campo "Inquiry" que deve aceitar a entrada de dados que deve aceitar letras,espaços e números com limite máximo de 500 char
-       
-Given("estou no formulário de ajuda", () => {
-    cy.visit("https://www.pagbrasil.com/support")
+    cy.wait("@post").then((intercept) => {
+        const { statusCode, body } = intercept.response;
+        expect(statusCode).to.eq(412);
+        expect(body.sucesso).to.be.false;
+        expect(body.erro).to.eq("Campo Phone inválido");
+         
+      });
 })
 
-When('preencher o campo Website com {string}', (Phone) => {
-    cy.get('#formInquiry').type(Inquiry)     
+Then('deve haver mensagens de erro no frontend', () => {
+    // Verificar se o elemento de erro existe no frontend   
+    const error = cy.get("#Error");
+    expect(error).to.exist;
+    error.should("have.text", "Campo Phone inválido");
 })
 
-Then('enviar o formulário', () => {
-    // enviar o formulário
-    cy.get('#formInquiry').submit()
-})
 
-Then('a API deve retornar HTTP_CODE 200 {int} com JSON:', (httpCode, json) => {
-    // Verificar a resposta do backend usando cy.request
-    cy.request('/sua-api-endpoint') // Substitua pelo endpoint real swagger
-        .its('status')
-        .should('eq', httpCode)
-        .its('body')
-        .should('deep.equal', JSON.parse(json))
-})
-
-Then('o campo Inquiry deve conter uma string de 500 caracteres', () => {
-    //verificar o limite permitido de char 500
-    cy.get('#formInquiry').invoke('val').should('have.length', 500);
-})
-
-Then('não deve haver mensagens de erro no frontend', () => {
-    // Verificar se o elemento de erro não existe no frontend
-    cy.get('#Error').should('not.exist')
-})
-
-Then('deve haver mensagens de erro no frontend indicando os campos incorretos', () => {
-    // Verificar se o elemento de erro existe no frontend
-    cy.get('#Error').should('exist')
-})
      
-
 
