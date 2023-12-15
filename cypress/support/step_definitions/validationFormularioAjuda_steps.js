@@ -1,5 +1,11 @@
 import {When, Then } from "@badeball/cypress-cucumber-preprocessor"
 
+const URL = "https://www.pagbrasil.com"
+
+When('estou no formulário de ajuda',() => {
+    cy.visit(URL)
+})
+
 // 1. Cenario: validacao dos campos  
 Then('validar Name', () => {
     const allowedCharactersRegex = /^[a-zA-Z0-9\s]+$/
@@ -13,7 +19,7 @@ Then('validar Name', () => {
     cy.get("#Name").should("have.attr", "maxlength", String(255));
 })
 
-When('validar Email,', () => {
+When('validar Email', () => {
     const emailRegex = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i 
     cy.get('#Email').type('meuteste@gmail.com')   
     cy.get('#Email').invoke('val')
